@@ -1,0 +1,104 @@
+version: "3"
+
+include:
+  - 3rdparty/docker-compose.yml
+  - cf.docker-compose.yml
+
+secrets:
+  db_password:
+     file: ./environment/secrets/db_password.txt
+
+networks:
+  gitea:
+    external: false
+  botnet:
+    internal: true
+  cloudflare-net:
+    attachable: false
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.155.188.0/24
+          ip_range: 10.155.188.0/24
+          gateway: 10.155.188.1
+          aux_addresses:
+            host1: 10.155.188.2
+            host2: 10.155.188.3
+            host3: 10.155.188.4
+    labels:
+       uk.itsrye.container.connectsTo: Cloudflare
+
+
+services:
+  server:
+    image: gitea/gitea:nightly
+    build: 
+      dockerfile: DOCKERFILE
+      context: ./custom-gitea
+    container_name: gitea
+    mem_limit: 500MB
+    env_file: 
+      - path: ./environment/gitea.env
+        required: true
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=mysql
+      - GITEA__database__HOST=db:3306
+      - GNUPGHOME=/data/gnupg
+    restart: always
+    networks:
+      gitea:
+      cloudflare-net:
+        ipv4_address: 10.155.188.5
+      pandoc_internal:
+      botnet:
+    volumes:
+      - ./gitea:/data
+      - ./gitea-render-scripts:/scripts
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "32080:3000"
+      - "32022:3022"
+    depends_on:
+      db:
+        condition: service_healthy
+        required: true
+        restart: true
+      sps:
+        condition: service_healthy
+        required: false
+        restart: false
+    labels:
+      com.centurylinklabs.watchtower.enable: true
+    healthcheck:
+      disable: true
+
+  db:
+    image: mariadb
+    restart: always
+    mem_limit: 250MB
+    secrets: 
+      - db_password
+    env_file:
+      - path: ./environment/db.env
+        required: true
+    environment:
+      - MARIADB_MYSQL_LOCALHOST_USER=true
+      - MYSQL_PASSWORD_FILE=/run/secrets/db_password
+      - MARIADB_AUTO_UPGRADE=true
+    networks:
+      - gitea
+    volumes:
+      - ./mysql:/var/lib/mysql
+      - ./gitea-db.sql:/gitea-db.sql:ro
+    labels:
+      uk.itsrye.autoheal.enable: true
+      com.centurylinklabs.watchtower.enable: true
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

@@ -1,0 +1,16 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    mem_limit: 25MB
+    command: tunnel run
+    networks:
+      - cloudflare-net
+    links:
+      - "server:gitea"
+    env_file:
+      - path: ./environment/cf.env
+        required: true
+    labels:
+      com.centurylinklabs.watchtower.enable: true
+      uk.itsrye.autoheal.enable: true

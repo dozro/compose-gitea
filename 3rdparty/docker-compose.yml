@@ -1,0 +1,11 @@
+# for 3rdparty components
+
+include:
+  - ./pandoc.docker-compose.yml
+#  - ./woodpecker/docker-compose.yml
+#  - ./renovate/docker-compose.yml
+#  - ./pages.docker-compose.yml
+
+networks:
+  thirdparty_default:
+    internal: true

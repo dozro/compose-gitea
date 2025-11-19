@@ -1,0 +1,20 @@
+# pandoc
+
+networks:
+  pandoc_internal:
+    internal: false
+    attachable: true
+
+services:
+   sps:
+    image: ghcr.io/dozro/simple-pandoc-server:main
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      uk.itsrye.autoheal.enable: "true"
+    networks:
+     - thirdparty_default
+     - pandoc_internal
+     - gitea
+    restart: unless-stopped
+    environment:
+      - "DEBUG=true"
