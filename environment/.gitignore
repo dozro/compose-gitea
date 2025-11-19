@@ -1,0 +1,4 @@
+# Dopplung zu der Definition im gitignore des Repo roots aber better safe than sorry
+*.env
+!.gitignore
+!.gitkeep
